@@ -27,7 +27,7 @@ namespace cstar {
 
     void ContainerNode::set(int i, Node::Ptr node)
     {
-        if (i <= _children.size()) {
+        if (i >= _children.size()) {
             _children.resize(i + 1, {nullptr});
         }
         _children[i] = node;

@@ -3,7 +3,7 @@
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the MIT license. See LICENSE for details.
- * 
+ *
  * @author Carter
  * @date 2022-06-15
  */
@@ -16,236 +16,270 @@
 
 namespace cstar {
 
-    class Program final : public ContainerNode {
-    public:
-        using ContainerNode::ContainerNode;
-        CYN_CONTAINER_NODE_VIEW(0, statements);
-    };
+class Program final : public ContainerNode {
+public:
+    using ContainerNode::ContainerNode;
+    CYN_CONTAINER_NODE_VIEW(0, statements);
+};
 
-    struct Expr : public ContainerNode {
-    public:
-        CSTAR_PTR(Expr);
+struct Expr : public ContainerNode {
+public:
+    CSTAR_PTR(Expr);
 
-        using ContainerNode::ContainerNode;
-    };
+    Expr(Range range = {});
+    Expr(Type::Ptr type, Range range = {});
 
-    struct Stmt : public ContainerNode {
-    public:
-        CSTAR_PTR(Stmt);
+    CYN_CONTAINER_NODE_MEMBER(Type, 0, type);
+};
 
-    public:
-        using ContainerNode::ContainerNode;
-    };
+struct Stmt : public ContainerNode {
+public:
+    CSTAR_PTR(Stmt);
 
-    struct Block : public Stmt {
-    public:
-        CSTAR_PTR(Block);
+    using ContainerNode::ContainerNode;
+};
 
-    public:
-        using Stmt::Stmt;
+struct Block : public Stmt {
+public:
+    CSTAR_PTR(Block);
 
-        VisitableNode();
-    };
+    using Stmt::Stmt;
 
-    struct FunctionDecl: public Stmt {
-    public:
-        CSTAR_PTR(FunctionDecl);
+    VisitableNode();
+};
 
-        CYN_CONTAINER_NODE_MEMBER(Type, 0, returnType);
-        CYN_CONTAINER_NODE_MEMBER(Expr, 1, name);
-        CYN_CONTAINER_NODE_MEMBER(Stmt, 2, body);
+struct FunctionDecl : public Stmt {
+public:
+    CSTAR_PTR(FunctionDecl);
 
-        explicit FunctionDecl(Expr::Ptr name, Range range = {});
+    CYN_CONTAINER_NODE_MEMBER(Type, 0, returnType);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 1, body);
 
-        VisitableNode();
-    };
+    explicit FunctionDecl(std::string_view name, Range range = {});
 
-    struct ExprList : public ContainerNode {
-    public:
-        CSTAR_PTR(ExprList);
+    VisitableNode();
 
-    public:
-        using ContainerNode::ContainerNode;
+    std::string_view name{};
+};
 
-        CYN_CONTAINER_NODE_VIEW(0, expressions);
-    };
+struct ExprList : public ContainerNode {
+public:
+    CSTAR_PTR(ExprList);
 
-    struct VariableExpr : public Expr {
-    public:
-        CSTAR_PTR(VariableExpr);
+    using ContainerNode::ContainerNode;
 
-    public:
-        std::string_view name;
-        CYN_CONTAINER_NODE_MEMBER(Type, 0, type);
+    CYN_CONTAINER_NODE_VIEW(0, expressions);
+};
 
-    public:
-        explicit VariableExpr(std::string_view name, Range range = {})
-            : Expr(std::move(range)), name{name} {}
+struct VariableExpr : public Expr {
+public:
+    CSTAR_PTR(VariableExpr);
 
-        VisitableNode()
-    };
+public:
+    explicit VariableExpr(std::string_view name, Range range = {})
+        : Expr(std::move(range)), name{name}
+    {
+    }
 
-    struct AssignmentExpr : public Expr {
-    public:
-        CSTAR_PTR(AssignmentExpr);
+    VisitableNode();
 
-    public:
-        CYN_CONTAINER_NODE_MEMBER(ExprList, 0, assignee);
-        CYN_CONTAINER_NODE_MEMBER(ExprList, 1, value);
+    std::string_view name{};
+};
 
-    public:
-        using Expr::Expr;
+struct AssignmentExpr : public Expr {
+public:
+    CSTAR_PTR(AssignmentExpr);
 
-        AssignmentExpr(ExprList::Ptr assignee, ExprList::Ptr value, Range range = {});
+    using Expr::Expr;
 
-    public:
-        VisitableNode()
-    };
+    AssignmentExpr(Expr::Ptr assignee, Expr::Ptr value, Range range = {});
 
-    struct BinaryExpr : public Expr {
-    public:
-        CSTAR_PTR(BinaryExpr);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, assignee);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, value);
 
-    public:
-        Token::Kind op{};
+    VisitableNode()
+};
 
-        CYN_CONTAINER_NODE_MEMBER(Expr, 0, left);
-        CYN_CONTAINER_NODE_MEMBER(Expr, 1, right);
+struct BinaryExpr : public Expr {
+public:
+    CSTAR_PTR(BinaryExpr);
 
-    public:
-        using Expr::Expr;
+    using Expr::Expr;
 
-        BinaryExpr(Expr::Ptr left, Token::Kind op, Expr::Ptr right, Range range = {});
+    BinaryExpr(Expr::Ptr left,
+               Token::Kind op,
+               Expr::Ptr right,
+               Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, left);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, right);
 
-    struct UnaryExpr : public Expr {
-    public:
-        CSTAR_PTR(UnaryExpr);
+    VisitableNode();
 
-    public:
-        Token::Kind op{};
+    Token::Kind op{};
+};
 
-        CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+struct UnaryExpr : public Expr {
+public:
+    CSTAR_PTR(UnaryExpr);
 
-    public:
-        using Expr::Expr;
+    using Expr::Expr;
 
-        UnaryExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
+    UnaryExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
 
-    struct LiteralExpr : public Expr {
-    public:
-        CSTAR_PTR(LiteralExpr);
+    VisitableNode();
 
-    public:
-        using Expr::Expr;
+    Token::Kind op{};
+};
 
-        CYN_CONTAINER_NODE_MEMBER(Type, 0, type);
+struct LiteralExpr : public Expr {
+public:
+    CSTAR_PTR(LiteralExpr);
 
-    public:
-        VisitableNode()
-    };
+    using Expr::Expr;
 
-    struct BoolExpr : public LiteralExpr {
-    public:
-        CSTAR_PTR(BoolExpr);
+    VisitableNode()
+};
 
-    public:
-        bool value{};
+struct BoolExpr : public LiteralExpr {
+public:
+    CSTAR_PTR(BoolExpr);
 
-    public:
-        using LiteralExpr::LiteralExpr;
+    using LiteralExpr::LiteralExpr;
 
-        explicit BoolExpr(bool value, Range range = {});
+    explicit BoolExpr(bool value, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    VisitableNode();
 
-    struct CharExpr : public LiteralExpr {
-    public:
-        CSTAR_PTR(CharExpr);
+    bool value{};
+};
 
-    public:
-        uint32_t value{};
+struct CharExpr : public LiteralExpr {
+public:
+    CSTAR_PTR(CharExpr);
 
-    public:
-        using LiteralExpr::LiteralExpr;
+    using LiteralExpr::LiteralExpr;
 
-        explicit CharExpr(uint32_t value, Range range = {});
+    explicit CharExpr(uint32_t value, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    VisitableNode();
 
-    struct IntegerExpr : public LiteralExpr {
-    public:
-        CSTAR_PTR(IntegerExpr);
+    uint32_t value{};
+};
 
-    public:
-        int64_t value{};
+struct IntegerExpr : public LiteralExpr {
+public:
+    CSTAR_PTR(IntegerExpr);
 
-    public:
-        using LiteralExpr::LiteralExpr;
+public:
+    using LiteralExpr::LiteralExpr;
 
-        explicit IntegerExpr(int64_t value, Range range = {});
+    explicit IntegerExpr(int64_t value, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    VisitableNode();
 
-    struct FloatExpr : public LiteralExpr {
-    public:
-        CSTAR_PTR(FloatExpr);
+    int64_t value{};
+};
 
-    public:
-        double value{};
+struct FloatExpr : public LiteralExpr {
+public:
+    CSTAR_PTR(FloatExpr);
 
-    public:
-        using LiteralExpr::LiteralExpr;
+    using LiteralExpr::LiteralExpr;
 
-        explicit FloatExpr(double value, Range range = {});
+    explicit FloatExpr(double value, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    VisitableNode();
 
-    struct StringExpr : public LiteralExpr {
-    public:
-        CSTAR_PTR(StringExpr);
+    double value{};
+};
 
-    public:
-        std::string_view value{};
+struct StringExpr : public LiteralExpr {
+public:
+    CSTAR_PTR(StringExpr);
 
-    public:
-        using LiteralExpr::LiteralExpr;
+    using LiteralExpr::LiteralExpr;
 
-        StringExpr(std::string_view value, Range range = {});
+    StringExpr(std::string_view value, Range range = {});
 
-    public:
-        VisitableNode()
-    };
+    VisitableNode();
 
-    struct GroupingExpr : public Expr {
-    public:
-        CSTAR_PTR(StringExpr);
+    std::string_view value{};
+};
 
-    public:
-        std::string_view value{};
+struct GroupingExpr : public Expr {
+public:
+    CSTAR_PTR(GroupingExpr);
 
-    public:
-        using Expr::Expr;
-        GroupingExpr(Expr::Ptr expr, Range range = {});
+public:
+    using Expr::Expr;
+    GroupingExpr(Expr::Ptr expr, Range range = {});
 
-        CYN_CONTAINER_NODE_MEMBER(Expr, 0, expr);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, expr);
 
-    public:
-        VisitableNode()
-    };
-}
+    VisitableNode()
+};
+
+class ExpressionStmt : public Stmt {
+public:
+    using Stmt::Stmt;
+
+    ExpressionStmt(Expr::Ptr expr, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, expr);
+
+    VisitableNode();
+};
+
+class DeclarationStmt : public Stmt {
+public:
+    using Stmt::Stmt;
+    DeclarationStmt(std::string_view name, bool imm, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Type, 0, type);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, value);
+
+    VisitableNode();
+
+    bool isImmutable{false};
+    std::string_view name{};
+};
+
+class IfStmt : public Stmt {
+public:
+    using Stmt::Stmt;
+    IfStmt(Expr::Ptr cond, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, condition);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 1, then);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 2, otherwise);
+
+    VisitableNode();
+};
+
+class WhileStmt : public Stmt {
+public:
+    using Stmt::Stmt;
+    WhileStmt(Expr::Ptr cond, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, condition);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 1, body);
+
+    VisitableNode();
+};
+
+class ForStmt : public Stmt {
+public:
+    ForStmt(Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 0, init);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, condition);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, update);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 3, body);
+
+    VisitableNode();
+};
+
+} // namespace cstar

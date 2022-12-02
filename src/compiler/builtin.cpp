@@ -18,13 +18,19 @@ namespace cstar {
 
     BuiltinType::Ptr builtin::voidType()
     {
-        static auto sVoidType = mk<BuiltinType>();
+        static auto sVoidType = mk<BuiltinType>("void");
+        return sVoidType;
+    }
+
+    BuiltinType::Ptr builtin::autoType()
+    {
+        static auto sVoidType = mk<BuiltinType>("auto");
         return sVoidType;
     }
 
     BuiltinType::Ptr builtin::nullType()
     {
-        BUILTIN_CREATE(Null, "Null");
+        BUILTIN_CREATE(Null, "null");
     }
 
 #undef BUILTIN_CREATE
@@ -115,5 +121,32 @@ namespace cstar {
         BUILTIN_CREATE(64);
     }
 #undef BUILTIN_CREATE
+
+    BuiltinType::Ptr builtin::getBuiltinType(const std::string_view name)
+    {
+        static const std::unordered_map<std::string_view, BuiltinType::Ptr> sBuiltins = {
+            {voidType()->name(), voidType()},
+            {autoType()->name(), autoType()},
+            {nullType()->name(), nullType()},
+            {booleanType()->name(), booleanType()},
+            {charType()->name(), charType()},
+            {i8Type()->name(), i8Type()},
+            {u8Type()->name(), u8Type()},
+            {i16Type()->name(), i16Type()},
+            {u16Type()->name(), u16Type()},
+            {i32Type()->name(), i32Type()},
+            {u32Type()->name(), u32Type()},
+            {i64Type()->name(), i64Type()},
+            {u64Type()->name(), u64Type()},
+            {f32Type()->name(), f32Type()},
+            {f64Type()->name(), f64Type()},
+            {stringType()->name(), stringType()}
+        };
+        auto it = sBuiltins.find(name);
+        if (it != sBuiltins.end()) {
+            return it->second;
+        }
+        return nullptr;
+    }
 
 }

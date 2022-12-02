@@ -29,4 +29,6 @@ namespace cstar::builtin {
     BuiltinType::Ptr f32Type();
     BuiltinType::Ptr f64Type();
     BuiltinType::Ptr stringType();
+    BuiltinType::Ptr autoType();
+    BuiltinType::Ptr getBuiltinType(const std::string_view name);
 }

@@ -38,9 +38,23 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions("-DCXY_DEBUG_EXEC_TRACE=0" "-DCXY_DEBUG_PRINT_STACK=1")
 endif()
 
+include(ExternalProject)
+
+ExternalProject_Add(qbe
+        DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
+        GIT_REPOSITORY git://c9x.me/qbe.git
+        UPDATE_COMMAND ""
+        SOURCE_DIR ${qbe_SOURCE_DIR}
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND make -j4
+        INSTALL_COMMAND make install DESTDIR=${CMAKE_BINARY_DIR}/qbe
+        )
+
 set(CXY_COMPILER_SOURCES
         src/compiler/ast.cpp
         src/compiler/builtin.cpp
+        src/compiler/codegen.cpp
         src/compiler/encoding.cpp
         src/compiler/dump.cpp
         src/compiler/lexer.cpp
@@ -56,7 +70,6 @@ set(CXY_COMPILER_SOURCES
 
 add_library(cstar-lib STATIC
         ${CXY_COMPILER_SOURCES})
-add_dependencies(cstar-lib lauf_core)
 
 add_executable(cstar
         src/compiler/main.cpp)

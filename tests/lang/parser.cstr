@@ -21,6 +21,40 @@ func main() {
     "Hello World 😂";
     true;
     false;
+    mut b = 100;
+    mut c = b;
+    {
+        mut b : i32;
+        mut a : i32;
+        {
+            c = a;
+            a = b;
+        }
+    }
+    c = 100;
 }
 
-func expr() -> (100 * 80) + -9
+func expr() -> (100 * 19) + -9;
+
+func stmts() {
+    mut a = true;
+    if (a == 10) {
+        a = 11;
+        if (a == 8 || a == 4 && true) {
+            a = a * 9 / 3 * a;
+        }
+    }
+
+    if (a == 0) a = 2;
+    else if (a == 2) a = 11;
+    else a = a + 8;
+
+    for(mut i = 0; i != 10; i+1) {
+        i = i+1;
+    }
+    while (true) {
+        for (a; a < 10; a+1) {
+
+        }
+    }
+}

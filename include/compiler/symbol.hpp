@@ -3,55 +3,87 @@
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the MIT license. See LICENSE for details.
- * 
+ *
  * @author Carter
  * @date 2022-06-15
  */
 
 #pragma once
 
-#include <compiler/utils.hpp>
 #include <compiler/node.hpp>
-#include <utility>
+#include <compiler/utils.hpp>
 #include <unordered_map>
+#include <utility>
 
 namespace cstar {
 
-    class SymbolTable {
-    public:
-        CSTAR_PTR(SymbolTable);
-        typedef enum {
-            kndUnknown,
-            kndVariable,
-            kndFunc
-        } Kind;
-        template <typename T = Node>
-        using Entry = std::pair<typename T::Ptr, Kind>;
+class SymbolTable;
 
-    public:
-        static constexpr int MAX_LOOKUP_DEPTH = 500;
+typedef enum { symUnknown, symVariable, symFunc } SymbolKind;
 
-    public:
-        SymbolTable(SymbolTable::Ptr enclosing = nullptr)
-            : _enclosing{std::move(enclosing)}
-        {}
+template <typename T = Node>
+struct Symbol {
+    SymbolKind kind{symUnknown};
+    Range range{};
+    typename T::Ptr value{nullptr};
+    SymbolTable *scope{nullptr};
+    operator bool() const { return kind != symUnknown; }
+};
 
-        bool define(std::string_view name, Node::Ptr sym, Kind kind);
-        Entry<> lookup(std::string_view name, int depth = MAX_LOOKUP_DEPTH);
-        template <typename T>
-            requires std::is_base_of_v<Node, T>
-        Entry<T> lookup(std::string_view name, int depth = MAX_LOOKUP_DEPTH) {
-            auto [f, s] = lookup(name, depth);
-            return {std::dynamic_pointer_cast<T>(f), s};
-        }
-        bool assign(std::string_view name, Node::Ptr  sym);
-        SymbolTable::Ptr& enclosing() { return _enclosing; }
-    private:
+class SymbolTable {
+public:
+    CSTAR_PTR(SymbolTable);
 
-        using SymbolsMap = std::unordered_map<std::string_view, Entry<>>;
+public:
+    static constexpr int MAX_LOOKUP_DEPTH = 500;
 
-        SymbolsMap   _symbols{};
-        SymbolTable::Ptr _enclosing{};
-    };
+public:
+    SymbolTable(SymbolTable::Ptr enclosing = nullptr)
+        : _enclosing{std::move(enclosing)}
+    {
+    }
 
-}
+    bool define(std::string_view name,
+                Node::Ptr sym,
+                Range range,
+                SymbolKind kind);
+
+    Symbol<> find(std::string_view name, int depth = MAX_LOOKUP_DEPTH);
+
+    // clang-format off
+    template <typename T>
+        requires std::is_base_of_v<Node, T>
+    Symbol<> lookup( // clang-format on
+        std::string_view name,
+        int depth = MAX_LOOKUP_DEPTH)
+    {
+        auto sym = find(name, depth);
+        return Symbol<T>{sym.kind,
+                         sym.range,
+                         std::dynamic_pointer_cast<T>(sym.value),
+                         sym.scope};
+    }
+
+    bool assign(std::string_view name, Node::Ptr value);
+
+    SymbolTable::Ptr enclosing() { return _enclosing; }
+
+private:
+    using SymbolsMap = std::unordered_map<std::string_view, Symbol<>>;
+
+    SymbolsMap _symbols{};
+    SymbolTable::Ptr _enclosing{};
+};
+
+class SymbolTableScope {
+public:
+    SymbolTableScope(SymbolTable::Ptr root);
+    void push();
+    void pop();
+    SymbolTable &table();
+
+private:
+    SymbolTable::Ptr _table;
+};
+
+} // namespace cstar

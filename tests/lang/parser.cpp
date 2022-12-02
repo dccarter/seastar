@@ -12,12 +12,16 @@
 #include "compiler/lexer.hpp"
 #include "compiler/source.hpp"
 #include "compiler/parser.hpp"
+#include "compiler/codegen.hpp"
+#include "compiler/symbol.hpp"
 
 using cstar::Lexer;
 using cstar::Log;
 using cstar::Source;
 using cstar::Parser;
 using cstar::AstDump;
+using cstar::Codegen;
+using cstar::SymbolTable;
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +32,7 @@ int main(int argc, char *argv[])
     if (!lexer.tokenize())
         abortCompiler(L);
 
-    Parser parser(L, lexer.tange());
+    Parser parser(L, lexer.tange(), std::make_shared<SymbolTable>());
     cstar::Program program;
     if (!parser.parse(program)) {
         abortCompiler(L);
@@ -36,5 +40,7 @@ int main(int argc, char *argv[])
     AstDump dump;
     dump.dump(program);
 
+    Codegen codegen(std::cout);
+    codegen.generate(program);
     abortCompiler(L);
 }
