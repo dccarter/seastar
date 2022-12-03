@@ -77,7 +77,7 @@ bool Parser::parse(Program &program)
 {
     while (!Eof()) {
         try {
-            program.insert(functionDecl());
+            program.insert(declaration());
         }
         catch (Synchronize &) {
             synchronize();
@@ -87,7 +87,7 @@ bool Parser::parse(Program &program)
     return !L.hasErrors();
 }
 
-FunctionDecl::Ptr Parser::functionDecl()
+FunctionDecl::Ptr Parser::function()
 {
     auto fn =
         consume(Token::FUNC, "expecting a 'func' keyword to start a function");
@@ -98,21 +98,40 @@ FunctionDecl::Ptr Parser::functionDecl()
 
     auto func = std::make_shared<FunctionDecl>(nstr, fn->range());
 
-    // TODO parse parameters
-    consume(Token::LPAREN, "expecting an opening paren '('");
-    consume(Token::RPAREN, "expecting an closing paren ')'");
+    try {
+        push();
+        consume(Token::LPAREN, "expecting an opening paren '('");
+        if (!check(Token::RPAREN)) {
+            auto params = std::make_shared<StatementList>(previous()->range());
+            ParameterStmt::Ptr param = nullptr;
+            do {
+                param = parameter(param);
+                params->range().extend(param->range());
+                params->add(param);
+            } while (match(Token::COMMA));
 
-    if (match(Token::RARROW)) {
-        auto expr = expressionStmt();
-        auto block = std::make_shared<Block>(expr->range());
-        block->insert(std::move(expr));
-        func->body(std::move(block));
-    }
-    else {
-        func->body(block());
-    }
+            func->params(std::move(params));
+        }
 
-    func->range().extend(func->body()->range());
+        consume(Token::RPAREN, "expecting an closing paren ')'");
+
+        if (match(Token::RARROW)) {
+            auto expr = expressionStmt();
+            auto block = std::make_shared<Block>(expr->range());
+            block->insert(std::move(expr));
+            func->body(std::move(block));
+        }
+        else {
+            func->body(block());
+        }
+
+        func->range().extend(func->body()->range());
+        pop();
+    }
+    catch (...) {
+        pop();
+        throw;
+    }
 
     return func;
 }
@@ -152,8 +171,15 @@ Stmt::Ptr Parser::statement()
 Stmt::Ptr Parser::declaration()
 {
     try {
-        if (check(Token::MUT, Token::IMM))
+        switch (kind()) {
+        case Token::MUT:
+        case Token::IMM:
             return variableDecl();
+        case Token::FUNC:
+            return function();
+        default:
+            break;
+        }
 
         return statement();
     }
@@ -226,33 +252,41 @@ Stmt::Ptr Parser::forStmt()
             "expecting an open paren ';' to start for loop clauses");
 
     auto stmt = std::make_shared<ForStmt>(start->range());
-    if (!match(Token::SEMICOLON)) {
-        if (check(Token::MUT, Token::IMM)) {
-            stmt->init(variableDecl());
+    push();
+    try {
+        if (!match(Token::SEMICOLON)) {
+            if (check(Token::MUT, Token::IMM)) {
+                stmt->init(variableDecl());
+            }
+            else {
+                stmt->init(expressionStmt());
+            }
+        }
+
+        if (!check(Token::SEMICOLON)) {
+            stmt->condition(expression());
+        }
+        consume(Token::SEMICOLON,
+                "expecting a semicolon ';' after loop condition.");
+
+        if (!check(Token::RPAREN)) {
+            stmt->update(expression());
+        }
+        consume(Token::RPAREN,
+                "expecting a closing paren ')' to close for loop clauses.");
+
+        if (!match(Token::SEMICOLON)) {
+            stmt->body(statement());
+            stmt->range().extend(stmt->body()->range());
         }
         else {
-            stmt->init(expressionStmt());
+            stmt->range().extend(previous()->range());
         }
+        pop();
     }
-
-    if (!check(Token::SEMICOLON)) {
-        stmt->condition(expression());
-    }
-    consume(Token::SEMICOLON,
-            "expecting a semicolon ';' after loop condition.");
-
-    if (!check(Token::RPAREN)) {
-        stmt->update(expression());
-    }
-    consume(Token::RPAREN,
-            "expecting a closing paren ')' to close for loop clauses.");
-
-    if (!match(Token::SEMICOLON)) {
-        stmt->body(statement());
-        stmt->range().extend(stmt->body()->range());
-    }
-    else {
-        stmt->range().extend(previous()->range());
+    catch (...) {
+        pop();
+        throw;
     }
 
     return stmt;
@@ -305,6 +339,64 @@ Stmt::Ptr Parser::variableDecl()
     return decl;
 }
 
+ParameterStmt::Ptr Parser::parameter(ParameterStmt::Ptr prev)
+{
+
+    if ((prev && (prev->flags & gflIsVariadic) == gflIsVariadic)) {
+        // ...param: Type ) only allowed as last parameter
+        error(prev->range(),
+              "parameter '",
+              prev->name,
+              "' cannot be a variadic parameter, it is followed by another "
+              "parameter");
+    }
+
+    auto isElipsis = match(Token::ELIPSIS);
+
+    auto name =
+        consume(Token::IDENTIFIER, "expecting the name of the parameter");
+    auto nstr = name->range().toString();
+
+    if (table().find(nstr, 0)) {
+        error(name->range(),
+              "parameter '",
+              nstr,
+              "' already defined in the parameter list");
+    }
+
+    consume(
+        Token::COLON,
+        "expecting a colon ':' after a parameter name and before the parameter "
+        "type");
+
+    auto param = std::make_shared<ParameterStmt>(name->range().toString(),
+                                                 name->range());
+    param->type(expressionType());
+    // TODO use type range
+    param->range().extend(previous()->range());
+
+    if (match(Token::ASSIGN)) {
+        // parameter default value
+        auto def = expression();
+        param->range().extend(def->range());
+        param->def(def);
+    }
+    else if (prev && (prev->def() != nullptr)) {
+        error(param->range(),
+              "default argument missing for parameter '",
+              nstr,
+              "'");
+    }
+
+    if (isElipsis) {
+        param->flags |= gflIsVariadic;
+    }
+
+    table().define(nstr, nullptr, param->range(), symVariable);
+
+    return param;
+}
+
 Type::Ptr Parser::expressionType()
 {
     auto tok = consume(Token::IDENTIFIER, "expecting a type name");
@@ -319,12 +411,88 @@ Expr::Ptr Parser::expression() { return assignment(); }
 Expr::Ptr Parser::assignment()
 {
     auto expr = lor();
-
-    if (match(Token::ASSIGN)) {
-        auto value = assignment();
+    Expr::Ptr value;
+    switch (kind()) {
+    case Token::ASSIGN:
+        advance();
+        value = assignment();
         expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
         expr->range().extend(value->range());
         return expr;
+    case Token::MINUSASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::MINUS, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::PLUSASSGIN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::PLUS, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::MULTASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::MULT, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::DIVASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::DIV, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::SHLASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::SHL, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::SHRASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::SHR, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::MODASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::MOD, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::BITANDASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::BITAND, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    case Token::BITORASSIGN:
+        advance();
+        value = assignment();
+        value = std::make_shared<BinaryExpr>(
+            expr, Token::BITOR, value, value->range());
+        expr = std::make_shared<AssignmentExpr>(expr, value, expr->range());
+        expr->range().extend(value->range());
+        return expr;
+    default:
+        break;
     }
 
     return expr;
@@ -353,6 +521,41 @@ Expr::Ptr Parser::land()
         expr =
             std::make_shared<BinaryExpr>(expr, Token::LAND, rhs, expr->range());
         expr->range().extend(rhs->range());
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::call()
+{
+    auto expr = primary();
+
+    while (true) {
+        if (match(Token::LPAREN)) {
+            auto arguments =
+                std::make_shared<ExpressionList>(previous()->range());
+            if (!check(Token::RPAREN)) {
+                do {
+                    auto arg = expression();
+                    arguments->range().extend(arg->range());
+                    arguments->add(std::move(arg));
+                } while (match(Token::COMMA));
+            }
+
+            auto tok = consume(
+                Token::RPAREN,
+                "expecting a closing paren '(' to end function arguments");
+            arguments->range().extend(tok->range());
+
+            auto call = std::make_shared<CallExpr>(expr, expr->range());
+            call->range().extend(tok->range());
+            call->arguments(std::move(arguments));
+
+            expr = std::move(call);
+        }
+        else {
+            break;
+        }
     }
 
     return expr;
@@ -429,7 +632,7 @@ Expr::Ptr Parser::unary()
         return expr;
     }
 
-    return primary();
+    return call();
 }
 
 Expr::Ptr Parser::primary()

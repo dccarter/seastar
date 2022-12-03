@@ -24,6 +24,7 @@ public:
     void generate(Program &p);
 
     void visit(ContainerNode &node) override;
+    void visit(ExpressionList &node) override;
     void visit(FunctionDecl &node) override;
     void visit(Block &node) override;
     void visit(UnaryExpr &node) override;
@@ -36,10 +37,13 @@ public:
     void visit(StringExpr &node) override;
     void visit(VariableExpr &node) override;
     void visit(AssignmentExpr &node) override;
+    void visit(CallExpr &node) override;
 
     void visit(DeclarationStmt &node) override;
     void visit(ExpressionStmt &node) override;
     void visit(IfStmt &node) override;
+    void visit(WhileStmt &node) override;
+    void visit(ForStmt &node) override;
 
 private:
     template <typename... Args>

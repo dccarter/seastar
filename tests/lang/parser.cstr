@@ -1,60 +1,18 @@
+/* code */
 
 func main() {
-    0;
-    0.;
-    0.001;
-    1;
-    123456789;
-    0b1;
-    0b0;
-    0b101010;
-    0x0;
-    0xFfAa8800;
-    012;
-    0765;
-    100e4;
-    10e+4;
-    100e-10;
-    'H';
-    '😂';
-    "Hello";
-    "Hello World 😂";
-    true;
-    false;
-    mut b = 100;
-    mut c = b;
-    {
-        mut b : i32;
-        mut a : i32;
-        {
-            c = a;
-            a = b;
-        }
-    }
-    c = 100;
+    mut hello: i32;
+    mut b = 10;
+    for (mut i = 0; i < 10; i += 2)
+        i = 0;
+    b += 10;
+    b = b += 10;
+
+    hello(10, 10, 10)(10, 10);
 }
 
-func expr() -> (100 * 19) + -9;
+mut age = 10;
 
-func stmts() {
-    mut a = true;
-    if (a == 10) {
-        a = 11;
-        if (a == 8 || a == 4 && true) {
-            a = a * 9 / 3 * a;
-        }
-    }
-
-    if (a == 0) a = 2;
-    else if (a == 2) a = 11;
-    else a = a + 8;
-
-    for(mut i = 0; i != 10; i+1) {
-        i = i+1;
-    }
-    while (true) {
-        for (a; a < 10; a+1) {
-
-        }
-    }
+func any(age: f32, ge: i8 = 10, fe : i8) {
+    
 }

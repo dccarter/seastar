@@ -48,27 +48,33 @@ public:
     VisitableNode();
 };
 
+struct StatementList : public ContainerNode {
+public:
+    CSTAR_PTR(StatementList);
+
+public:
+    using ContainerNode::ContainerNode;
+
+    CYN_CONTAINER_NODE_VIEW(0, stmts);
+
+    void add(Stmt::Ptr stmts) { push(std::move(stmts)); }
+
+    VisitableNode()
+};
+
 struct FunctionDecl : public Stmt {
 public:
     CSTAR_PTR(FunctionDecl);
 
     CYN_CONTAINER_NODE_MEMBER(Type, 0, returnType);
-    CYN_CONTAINER_NODE_MEMBER(Stmt, 1, body);
+    CYN_CONTAINER_NODE_MEMBER(StatementList, 1, params);
+    CYN_CONTAINER_NODE_MEMBER(Stmt, 2, body);
 
     explicit FunctionDecl(std::string_view name, Range range = {});
 
     VisitableNode();
 
     std::string_view name{};
-};
-
-struct ExprList : public ContainerNode {
-public:
-    CSTAR_PTR(ExprList);
-
-    using ContainerNode::ContainerNode;
-
-    CYN_CONTAINER_NODE_VIEW(0, expressions);
 };
 
 struct VariableExpr : public Expr {
@@ -222,8 +228,37 @@ public:
     VisitableNode()
 };
 
+struct ExpressionList : public ContainerNode {
+public:
+    CSTAR_PTR(ExpressionList);
+
+public:
+    using ContainerNode::ContainerNode;
+
+    CYN_CONTAINER_NODE_VIEW(0, exprs);
+
+    void add(Expr::Ptr expr) { push(std::move(expr)); }
+
+    VisitableNode()
+};
+
+struct CallExpr : public Expr {
+public:
+    CSTAR_PTR(CallExpr);
+
+public:
+    using Expr::Expr;
+    CallExpr(Expr::Ptr callee, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, callee);
+    CYN_CONTAINER_NODE_MEMBER(ExpressionList, 1, arguments);
+
+    VisitableNode()
+};
+
 class ExpressionStmt : public Stmt {
 public:
+    CSTAR_PTR(ExpressionStmt);
     using Stmt::Stmt;
 
     ExpressionStmt(Expr::Ptr expr, Range range = {});
@@ -235,6 +270,7 @@ public:
 
 class DeclarationStmt : public Stmt {
 public:
+    CSTAR_PTR(DeclarationStmt);
     using Stmt::Stmt;
     DeclarationStmt(std::string_view name, bool imm, Range range = {});
 
@@ -247,8 +283,22 @@ public:
     std::string_view name{};
 };
 
+class ParameterStmt : public DeclarationStmt {
+public:
+    CSTAR_PTR(ParameterStmt);
+    using DeclarationStmt::DeclarationStmt;
+    ParameterStmt(std::string_view name, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, def);
+
+    VisitableNode();
+
+    GenericFlags flags{gflNone};
+};
+
 class IfStmt : public Stmt {
 public:
+    CSTAR_PTR(IfStmt);
     using Stmt::Stmt;
     IfStmt(Expr::Ptr cond, Range range = {});
 
@@ -261,6 +311,7 @@ public:
 
 class WhileStmt : public Stmt {
 public:
+    CSTAR_PTR(WhileStmt);
     using Stmt::Stmt;
     WhileStmt(Expr::Ptr cond, Range range = {});
 
@@ -272,6 +323,7 @@ public:
 
 class ForStmt : public Stmt {
 public:
+    CSTAR_PTR(ForStmt);
     ForStmt(Range range = {});
 
     CYN_CONTAINER_NODE_MEMBER(Stmt, 0, init);

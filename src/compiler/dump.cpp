@@ -15,6 +15,7 @@
 #include "compiler/log.hpp"
 #include "compiler/types.hpp"
 
+#include <inttypes.h>
 #include <iostream>
 
 namespace {
@@ -110,7 +111,7 @@ void AstDump::visit(CharExpr &node)
     std::putchar('\'');
 }
 
-void AstDump::visit(IntegerExpr &node) { std::printf("%lld", node.value); }
+void AstDump::visit(IntegerExpr &node) { std::printf("%" PRId64, node.value); }
 
 void AstDump::visit(FloatExpr &node) { std::printf("%g", node.value); }
 
@@ -165,9 +166,34 @@ void AstDump::visit(AssignmentExpr &node)
     level -= 2;
 }
 
+void AstDump::visit(ExpressionList &node)
+{
+    for (auto expr : node.exprs()) {
+        std::printf("\n%*c- ", level, ' ');
+        expr->accept(*this);
+    }
+}
+
+void AstDump::visit(CallExpr &node)
+{
+    std::fputs("CallExpr:\n", stdout);
+    level += 2;
+    std::printf("%*c- callee: ", level, ' ');
+    node.callee()->accept(*this);
+    std::printf("\n%*c- args: ", level, ' ');
+
+    if (auto args = node.arguments()) {
+        level += 2;
+        args->accept(*this);
+        level -= 2;
+    }
+
+    level -= 2;
+}
+
 void AstDump::visit(cstar::ExpressionStmt &node)
 {
-    puttab(level);
+    std::printf("%*c- ExpressionSmt: ", level, ' ');
     node.expr()->accept(*this);
 }
 
@@ -195,8 +221,7 @@ void AstDump::visit(cstar::DeclarationStmt &node)
 
 void AstDump::visit(IfStmt &node)
 {
-    puttab(level);
-    std::fputs("IfStmt\n", stdout);
+    std::printf("%*c- IfStmt\n", level, ' ');
     level += 2;
     std::printf("%*c- cond: ", level, ' ');
     node.condition()->accept(*this);
@@ -217,7 +242,47 @@ void AstDump::visit(WhileStmt &node)
 {
     std::printf("%*c- WhileStmt:\n", level, ' ');
     level += 2;
-    std::printf("*%c- cond: ", level, ' ');
+    std::printf("%*c- cond: ", level, ' ');
+    node.condition()->accept(*this);
+
+    if (auto body = node.body()) {
+        std::printf("\n%*c- body:\n", level, ' ');
+        level += 2;
+        body->accept(*this);
+        level -= 2;
+    }
+    level -= 2;
+}
+
+void AstDump::visit(ForStmt &node)
+{
+    std::printf("%*c- ForStmt:\n", level, ' ');
+    level += 2;
+    if (auto init = node.init()) {
+        std::printf("%*c init:\n", level, ' ');
+        level += 2;
+        init->accept(*this);
+        level -= 2;
+    }
+
+    if (auto cond = node.condition()) {
+        std::printf("\n%*c- cond: ", level, ' ');
+        cond->accept(*this);
+    }
+
+    if (auto update = node.update()) {
+        std::printf("\n%*c- update: ", level, ' ');
+        update->accept(*this);
+    }
+
+    if (auto body = node.body()) {
+        std::printf("\n%*c- body:\n", level, ' ');
+        level += 2;
+        body->accept(*this);
+        level -= 2;
+    }
+
+    level -= 2;
 }
 
 } // namespace cstar

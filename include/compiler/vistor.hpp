@@ -42,12 +42,14 @@ class Program;
     XX(Binary)                                                                 \
     XX(Unary)                                                                  \
     XX(Grouping)                                                               \
-    XX(Assignment)
+    XX(Assignment)                                                             \
+    XX(Call)
 
 #define NODE_LIST(XX)                                                          \
     XX(Node)                                                                   \
     XX(ContainerNode)                                                          \
-    XX(Block)
+    XX(Block)                                                                  \
+    XX(ExpressionList)
 
 #define XX(N) struct N;
 NODE_LIST(XX)

@@ -19,6 +19,7 @@ FunctionDecl::FunctionDecl(std::string_view funcName, Range range)
     : Stmt(std::move(range)), name{funcName}
 {
     returnType(builtin::voidType());
+    params(nullptr);
     body(nullptr);
 }
 
@@ -87,11 +88,23 @@ GroupingExpr::GroupingExpr(Expr::Ptr e, Range range) : Expr(std::move(range))
     expr(std::move(e));
 }
 
+CallExpr::CallExpr(Expr::Ptr func, Range range) : Expr(std::move(range))
+{
+    callee(std::move(func));
+    arguments(nullptr);
+}
+
 DeclarationStmt::DeclarationStmt(std::string_view var, bool imm, Range range)
     : Stmt(std::move(range)), isImmutable{imm}, name{var}
 {
     type(builtin::autoType());
     value(nullptr);
+}
+
+ParameterStmt::ParameterStmt(std::string_view var, Range range)
+    : DeclarationStmt(var, true, std::move(range))
+{
+    def(nullptr);
 }
 
 ExpressionStmt::ExpressionStmt(Expr::Ptr exp, Range range)

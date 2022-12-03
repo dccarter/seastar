@@ -30,7 +30,7 @@ public:
 private:
     Log &L;
 
-    FunctionDecl::Ptr functionDecl();
+    FunctionDecl::Ptr function();
     Block::Ptr block();
     LiteralExpr::Ptr literal();
     VariableExpr::Ptr variable();
@@ -44,6 +44,7 @@ private:
     Expr::Ptr assignment();
     Expr::Ptr lor();
     Expr::Ptr land();
+    Expr::Ptr call();
     Stmt::Ptr statement();
     Stmt::Ptr variableDecl();
     Stmt::Ptr declaration();
@@ -51,7 +52,7 @@ private:
     Stmt::Ptr ifStmt();
     Stmt::Ptr whileStmt();
     Stmt::Ptr forStmt();
-
+    ParameterStmt::Ptr parameter(ParameterStmt::Ptr prev = nullptr);
     Type::Ptr expressionType();
 
     Token::Ref advance();

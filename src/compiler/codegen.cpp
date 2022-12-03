@@ -61,6 +61,17 @@ void Codegen::visit(Block &node)
     Append('}');
 }
 
+void Codegen::visit(ExpressionList &node)
+{
+    bool first{true};
+    for (auto expr : node.exprs()) {
+        if (!first)
+            Append(", ");
+        expr->accept(*this);
+        first = false;
+    }
+}
+
 void Codegen::visit(UnaryExpr &node)
 {
     Append(Token::toString(node.op, true));
@@ -98,6 +109,18 @@ void Codegen::visit(AssignmentExpr &node)
     node.assignee()->accept(*this);
     Append(" = ");
     node.value()->accept(*this);
+}
+
+void Codegen::visit(CallExpr &node)
+{
+    node.callee()->accept(*this);
+    Append('(');
+
+    if (auto args = node.arguments()) {
+        args->accept(*this);
+    }
+
+    Append(')');
 }
 
 void Codegen::visit(DeclarationStmt &node)
@@ -152,6 +175,67 @@ void Codegen::visit(IfStmt &node)
         Tab();
         Append("else\n");
         stmt->accept(*this);
+    }
+}
+
+void Codegen::visit(WhileStmt &node)
+{
+    Tab();
+    Append("while (");
+    node.condition()->accept(*this);
+    Append(")\n");
+
+    if (auto body = std::dynamic_pointer_cast<ExpressionStmt>(node.body())) {
+        _level += 2;
+        body->accept(*this);
+        _level -= 2;
+    }
+    else if (auto body = node.body()) {
+        body->accept(*this);
+    }
+    else {
+        Append(";");
+    }
+}
+
+void Codegen::visit(ForStmt &node)
+{
+    Tab();
+    Append("for (");
+    auto tmp = _level;
+    _level = 0;
+
+    if (auto init = node.init()) {
+        init->accept(*this);
+        Append(" ");
+    }
+    else {
+        Append("; ");
+    }
+
+    _level = tmp;
+
+    if (auto cond = node.condition()) {
+        cond->accept(*this);
+    }
+    Append("; ");
+
+    if (auto update = node.update()) {
+        update->accept(*this);
+    }
+
+    Append(")\n");
+
+    if (auto body = std::dynamic_pointer_cast<ExpressionStmt>(node.body())) {
+        _level += 2;
+        body->accept(*this);
+        _level -= 2;
+    }
+    else if (auto body = node.body()) {
+        body->accept(*this);
+    }
+    else {
+        Append(";");
     }
 }
 

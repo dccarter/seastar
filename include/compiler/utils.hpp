@@ -20,24 +20,31 @@ namespace cstar {
 
 #define BIT(n) (1 << (n))
 
-template <typename T> using ptr = std::shared_ptr<T>;
-template <typename T> using wptr = std::weak_ptr<T>;
+template <typename T>
+using ptr = std::shared_ptr<T>;
+template <typename T>
+using wptr = std::weak_ptr<T>;
 
 #define CSTAR_PTR(T) using Ptr = std::shared_ptr<T>
 
-template <typename T> using vec = std::vector<T>;
+template <typename T>
+using vec = std::vector<T>;
 
-template <typename T> struct __Complex;
+template <typename T>
+struct __Complex;
 
-template <> struct __Complex<float> {
+template <>
+struct __Complex<float> {
     typedef _Complex float type;
 };
 
-template <> struct __Complex<double> {
+template <>
+struct __Complex<double> {
     typedef _Complex double type;
 };
 
-template <> struct __Complex<long double> {
+template <>
+struct __Complex<long double> {
     typedef _Complex long double type;
 };
 
@@ -45,14 +52,20 @@ template <typename T>
 requires std::is_floating_point_v<T>
 using Complex = typename __Complex<T>::type;
 
-template <typename T> static inline T real(Complex<T> c) { return __real__ c; }
+template <typename T>
+static inline T real(Complex<T> c)
+{
+    return __real__ c;
+}
 
-template <typename T> static inline T imaginary(Complex<T> c)
+template <typename T>
+static inline T imaginary(Complex<T> c)
 {
     return __imag__ c;
 }
 
-template <typename T, typename... Args> ptr<T> mk(Args &&...args)
+template <typename T, typename... Args>
+ptr<T> mk(Args &&...args)
 {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
@@ -200,7 +213,9 @@ typedef enum {
     gflIsVariadic = BIT(2),
     gflIsGeneric = BIT(3),
     gflIsExtern = BIT(4),
-    gflIsOverload = BIT(5)
+    gflIsOverload = BIT(5),
+    gflLexerSkipComments = BIT(6),
+    gflIsReference = BIT(7)
 } GenericFlags_t;
 
 using GenericFlags = Flags<GenericFlags_t>;
