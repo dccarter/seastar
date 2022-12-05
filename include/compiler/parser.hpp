@@ -110,7 +110,10 @@ private:
 
     void synchronize();
 
-    bool Eof() { return _current == _tokens.second; }
+    bool Eof()
+    {
+        return _current->kind == Token::EoF || _current == _tokens.second;
+    }
 
     Token::Tange _tokens;
     Token::Ref _current;

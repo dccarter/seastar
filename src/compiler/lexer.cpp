@@ -127,7 +127,9 @@ bool Lexer::tokenize()
             return false;
         }
     }
-
+    auto pos = mark();
+    pos.index = _idx - 1;
+    addToken(Token::EoF, pos, pos.index);
     return true;
 }
 
@@ -148,7 +150,7 @@ bool Lexer::tokenize(char c)
 #define IF_ELSE2(CC, CCC, T, E, EE)                                            \
     if (cc == (CC)) {                                                          \
         if (ccc == (CCC)) {                                                    \
-            advance(3);                                                        \
+            advance(2);                                                        \
             addToken((T), pos, advance());                                     \
         }                                                                      \
         else {                                                                 \

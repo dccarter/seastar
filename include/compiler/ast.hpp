@@ -292,8 +292,6 @@ public:
     CYN_CONTAINER_NODE_MEMBER(Expr, 2, def);
 
     VisitableNode();
-
-    GenericFlags flags{gflNone};
 };
 
 class IfStmt : public Stmt {

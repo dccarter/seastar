@@ -1,5 +1,12 @@
 /* code */
 
+func any(age: f32, ge: i8, fe : i8, ...all: i32)
+{
+    @for (;; all) {
+        println(a);
+    }
+}
+
 func main() {
     mut hello: i32;
     mut b = 10;
@@ -12,7 +19,3 @@ func main() {
 }
 
 mut age = 10;
-
-func any(age: f32, ge: i8 = 10, fe : i8) {
-    
-}

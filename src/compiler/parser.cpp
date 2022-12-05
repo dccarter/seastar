@@ -89,6 +89,7 @@ bool Parser::parse(Program &program)
 
 FunctionDecl::Ptr Parser::function()
 {
+    auto isComptime = match(Token::AT);
     auto fn =
         consume(Token::FUNC, "expecting a 'func' keyword to start a function");
 
@@ -133,6 +134,9 @@ FunctionDecl::Ptr Parser::function()
         throw;
     }
 
+    if (isComptime)
+        func->flags &= gflIsComptime;
+
     return func;
 }
 
@@ -141,7 +145,7 @@ Block::Ptr Parser::block()
     auto lb = consume(Token::LBRACE, "expecting an opening brace '{'");
     push();
     auto block = std::make_shared<Block>(lb->range());
-    while (!check(Token::RBRACE)) {
+    while (!Eof() && !check(Token::RBRACE)) {
         if (auto stmt = declaration())
             block->insert(stmt);
     }
@@ -149,7 +153,8 @@ Block::Ptr Parser::block()
     auto rb = consume(Token::RBRACE, "expecting a closing brace '}'");
     block->range().extend(rb->range());
     pop();
-    return std::move(block);
+
+    return block;
 }
 
 Stmt::Ptr Parser::statement()
@@ -201,6 +206,8 @@ Stmt::Ptr Parser::expressionStmt()
 
 Stmt::Ptr Parser::ifStmt()
 {
+    auto isComptime = match(Token::AT);
+
     auto start = consume(Token::IF, "expecting an 'if' statement");
     consume(Token::LPAREN,
             "expecting an opening paren '(' after an 'if' keyword");
@@ -217,11 +224,16 @@ Stmt::Ptr Parser::ifStmt()
         stmt->range().extend(stmt->then()->range());
     }
 
+    if (isComptime)
+        stmt->flags &= gflIsComptime;
+
     return stmt;
 }
 
 Stmt::Ptr Parser::whileStmt()
 {
+    auto isComptime = match(Token::AT);
+
     auto start = consume(
         Token::WHILE, "expecting a 'while' keyword to start a while statement");
     consume(Token::LPAREN,
@@ -241,11 +253,14 @@ Stmt::Ptr Parser::whileStmt()
         stmt->range().extend(previous()->range());
     }
 
+    if (isComptime)
+        stmt->flags &= gflIsComptime;
     return stmt;
 }
 
 Stmt::Ptr Parser::forStmt()
 {
+    auto isComptime = match(Token::AT);
     auto start = consume(
         Token::FOR, "expecting a 'for' keyword to start a 'for' statement");
     consume(Token::LPAREN,
@@ -288,7 +303,8 @@ Stmt::Ptr Parser::forStmt()
         pop();
         throw;
     }
-
+    if (isComptime)
+        stmt->flags &= gflIsComptime;
     return stmt;
 }
 
@@ -351,14 +367,27 @@ ParameterStmt::Ptr Parser::parameter(ParameterStmt::Ptr prev)
               "parameter");
     }
 
+    auto range = _current->range();
     auto isElipsis = match(Token::ELIPSIS);
 
     auto name =
         consume(Token::IDENTIFIER, "expecting the name of the parameter");
+    if (isElipsis)
+        range.extend(name->range());
+
     auto nstr = name->range().toString();
 
+    if (isElipsis && (prev && prev->def())) {
+        // ...param: Type ) not allowed when previous parameter has a default
+        // value
+        error(range,
+              "variadiac parameter '",
+              nstr,
+              "' not allowed after parameters with default arguments");
+    }
+
     if (table().find(nstr, 0)) {
-        error(name->range(),
+        error(range,
               "parameter '",
               nstr,
               "' already defined in the parameter list");
@@ -369,14 +398,20 @@ ParameterStmt::Ptr Parser::parameter(ParameterStmt::Ptr prev)
         "expecting a colon ':' after a parameter name and before the parameter "
         "type");
 
-    auto param = std::make_shared<ParameterStmt>(name->range().toString(),
-                                                 name->range());
+    auto param = std::make_shared<ParameterStmt>(nstr, range);
     param->type(expressionType());
+
     // TODO use type range
     param->range().extend(previous()->range());
 
     if (match(Token::ASSIGN)) {
         // parameter default value
+        range.extend(previous()->range());
+        if (isElipsis) {
+            error(range,
+                  "default parameter arguments cannot be assigned to variadiac "
+                  "parameters");
+        }
         auto def = expression();
         param->range().extend(def->range());
         param->def(def);

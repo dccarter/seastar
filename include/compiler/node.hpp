@@ -29,6 +29,8 @@ struct Node {
 
     virtual void accept(Visitor &visitor) { visitor.visit(*this); }
 
+    GenericFlags flags{gflNone};
+
 private:
     Range _range{};
 };
