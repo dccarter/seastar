@@ -89,7 +89,6 @@ bool Parser::parse(Program &program)
 
 FunctionDecl::Ptr Parser::function()
 {
-    auto isComptime = match(Token::AT);
     auto fn =
         consume(Token::FUNC, "expecting a 'func' keyword to start a function");
 
@@ -134,9 +133,6 @@ FunctionDecl::Ptr Parser::function()
         throw;
     }
 
-    if (isComptime)
-        func->flags &= gflIsComptime;
-
     return func;
 }
 
@@ -175,18 +171,26 @@ Stmt::Ptr Parser::statement()
 
 Stmt::Ptr Parser::declaration()
 {
+    auto isComptime = match(Token::AT);
+    Stmt::Ptr stmt{nullptr};
+
     try {
         switch (kind()) {
         case Token::MUT:
         case Token::IMM:
-            return variableDecl();
-        case Token::FUNC:
-            return function();
-        default:
+            stmt = variableDecl();
             break;
+        case Token::FUNC:
+            stmt = function();
+            break;
+        default:
+            stmt = statement();
+        }
+        if (isComptime) {
+            stmt->flags |= gflIsComptime;
         }
 
-        return statement();
+        return stmt;
     }
     catch (Synchronize &) {
         synchronize();
@@ -206,8 +210,6 @@ Stmt::Ptr Parser::expressionStmt()
 
 Stmt::Ptr Parser::ifStmt()
 {
-    auto isComptime = match(Token::AT);
-
     auto start = consume(Token::IF, "expecting an 'if' statement");
     consume(Token::LPAREN,
             "expecting an opening paren '(' after an 'if' keyword");
@@ -224,16 +226,11 @@ Stmt::Ptr Parser::ifStmt()
         stmt->range().extend(stmt->then()->range());
     }
 
-    if (isComptime)
-        stmt->flags &= gflIsComptime;
-
     return stmt;
 }
 
 Stmt::Ptr Parser::whileStmt()
 {
-    auto isComptime = match(Token::AT);
-
     auto start = consume(
         Token::WHILE, "expecting a 'while' keyword to start a while statement");
     consume(Token::LPAREN,
@@ -253,14 +250,11 @@ Stmt::Ptr Parser::whileStmt()
         stmt->range().extend(previous()->range());
     }
 
-    if (isComptime)
-        stmt->flags &= gflIsComptime;
     return stmt;
 }
 
 Stmt::Ptr Parser::forStmt()
 {
-    auto isComptime = match(Token::AT);
     auto start = consume(
         Token::FOR, "expecting a 'for' keyword to start a 'for' statement");
     consume(Token::LPAREN,
@@ -303,8 +297,7 @@ Stmt::Ptr Parser::forStmt()
         pop();
         throw;
     }
-    if (isComptime)
-        stmt->flags &= gflIsComptime;
+
     return stmt;
 }
 
@@ -377,7 +370,7 @@ ParameterStmt::Ptr Parser::parameter(ParameterStmt::Ptr prev)
 
     auto nstr = name->range().toString();
 
-    if (isElipsis && (prev && prev->def())) {
+    if (isElipsis && (prev && prev->value())) {
         // ...param: Type ) not allowed when previous parameter has a default
         // value
         error(range,
@@ -414,9 +407,9 @@ ParameterStmt::Ptr Parser::parameter(ParameterStmt::Ptr prev)
         }
         auto def = expression();
         param->range().extend(def->range());
-        param->def(def);
+        param->value(def);
     }
-    else if (prev && (prev->def() != nullptr)) {
+    else if (prev && (prev->value() != nullptr)) {
         error(param->range(),
               "default argument missing for parameter '",
               nstr,
@@ -549,12 +542,54 @@ Expr::Ptr Parser::lor()
 
 Expr::Ptr Parser::land()
 {
-    auto expr = equality();
+    auto expr = bor();
 
     while (match(Token::LAND)) {
-        auto rhs = equality();
+        auto rhs = bor();
         expr =
             std::make_shared<BinaryExpr>(expr, Token::LAND, rhs, expr->range());
+        expr->range().extend(rhs->range());
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::bor()
+{
+    auto expr = bxor();
+
+    while (match(Token::BITOR)) {
+        auto rhs = bxor();
+        expr = std::make_shared<BinaryExpr>(
+            expr, Token::BITOR, rhs, expr->range());
+        expr->range().extend(rhs->range());
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::bxor()
+{
+    auto expr = band();
+
+    while (match(Token::BITXOR)) {
+        auto rhs = band();
+        expr = std::make_shared<BinaryExpr>(
+            expr, Token::BITXOR, rhs, expr->range());
+        expr->range().extend(rhs->range());
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::band()
+{
+    auto expr = equality();
+
+    while (match(Token::BITAND)) {
+        auto rhs = equality();
+        expr = std::make_shared<BinaryExpr>(
+            expr, Token::BITAND, rhs, expr->range());
         expr->range().extend(rhs->range());
     }
 
@@ -642,11 +677,11 @@ Expr::Ptr Parser::terminal()
 
 Expr::Ptr Parser::factor()
 {
-    auto expr = unary();
+    auto expr = nots();
 
     while (match(Token::DIV, Token::MULT)) {
         auto op = previous()->kind;
-        auto right = unary();
+        auto right = nots();
 
         expr = std::make_shared<BinaryExpr>(expr, op, right, expr->range());
         expr->range().extend(right->range());
@@ -657,7 +692,7 @@ Expr::Ptr Parser::factor()
 
 Expr::Ptr Parser::unary()
 {
-    if (match(Token::NOT, Token::MINUS)) {
+    if (match(Token::PLUS, Token::MINUS)) {
         auto op = previous();
         auto right = unary();
 
@@ -667,7 +702,44 @@ Expr::Ptr Parser::unary()
         return expr;
     }
 
-    return call();
+    return prefix();
+}
+
+Expr::Ptr Parser::nots()
+{
+    if (match(Token::COMPLEMENT, Token::NOT)) {
+        auto op = previous();
+        auto right = nots();
+
+        auto expr = std::make_shared<UnaryExpr>(op->kind, right, op->range());
+        expr->range().extend(right->range());
+
+        return expr;
+    }
+
+    return unary();
+}
+
+Expr::Ptr Parser::prefix()
+{
+    if (match(Token::MINUSMINUS, Token::PLUSPLUS)) {
+        auto op = previous();
+        auto right = prefix();
+
+        auto expr = std::make_shared<PrefixExpr>(op->kind, right, op->range());
+        expr->range().extend(right->range());
+
+        return expr;
+    }
+
+    auto expr = call();
+    while (match(Token::PLUSPLUS, Token::MINUSMINUS)) {
+        auto op = previous();
+        expr = std::make_shared<PostfixExpr>(op->kind, expr, expr->range());
+        expr->range().extend(op->range());
+    }
+
+    return expr;
 }
 
 Expr::Ptr Parser::primary()

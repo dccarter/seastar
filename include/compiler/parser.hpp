@@ -34,6 +34,8 @@ private:
     Block::Ptr block();
     LiteralExpr::Ptr literal();
     VariableExpr::Ptr variable();
+    Expr::Ptr prefix();
+    Expr::Ptr nots();
     Expr::Ptr unary();
     Expr::Ptr factor();
     Expr::Ptr equality();
@@ -45,6 +47,9 @@ private:
     Expr::Ptr lor();
     Expr::Ptr land();
     Expr::Ptr call();
+    Expr::Ptr band();
+    Expr::Ptr bor();
+    Expr::Ptr bxor();
     Stmt::Ptr statement();
     Stmt::Ptr variableDecl();
     Stmt::Ptr declaration();

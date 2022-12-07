@@ -70,6 +70,13 @@ void AstDump::visit(FunctionDecl &node)
                 int(node.name.size()),
                 node.name.data());
 
+    if (auto params = node.params()) {
+        std::printf("\n%*c- params:", level, ' ');
+        level += 2;
+        params->accept(*this);
+        level -= 2;
+    }
+
     std::printf("\n%*c- body: \n", level, ' ');
     level += 2;
     node.body()->accept(*this);
@@ -219,6 +226,29 @@ void AstDump::visit(cstar::DeclarationStmt &node)
     level -= 2;
 }
 
+void AstDump::visit(cstar::ParameterStmt &node)
+{
+    std::printf("%*c- ParameterStmt:", level, ' ');
+    level += 2;
+    if (auto tp = node.type()) {
+        std::printf("\n%*c- type: ", level, ' ');
+        tp->accept(*this);
+    }
+
+    std::printf("\n%*c- name: %s%.*s",
+                level,
+                ' ',
+                (node.flags && gflIsVariadic) ? "..." : "",
+                int(node.name.size()),
+                node.name.data());
+
+    if (auto val = node.value()) {
+        std::printf("\n%*c- value: ", level, ' ');
+        val->accept(*this);
+    }
+    level -= 2;
+}
+
 void AstDump::visit(IfStmt &node)
 {
     std::printf("%*c- IfStmt\n", level, ' ');
@@ -283,6 +313,14 @@ void AstDump::visit(ForStmt &node)
     }
 
     level -= 2;
+}
+
+void AstDump::visit(StatementList &node)
+{
+    for (auto stmt : node.stmts()) {
+        std::putchar('\n');
+        stmt->accept(*this);
+    }
 }
 
 } // namespace cstar

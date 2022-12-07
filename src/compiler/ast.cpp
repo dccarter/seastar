@@ -53,6 +53,18 @@ UnaryExpr::UnaryExpr(Token::Kind op, Expr::Ptr rhs, Range range)
     operand(std::move(rhs));
 }
 
+PrefixExpr::PrefixExpr(Token::Kind op, Expr::Ptr rhs, Range range)
+    : Expr(std::move(range)), op{op}
+{
+    operand(std::move(rhs));
+}
+
+PostfixExpr::PostfixExpr(Token::Kind op, Expr::Ptr lhs, Range range)
+    : Expr(std::move(range)), op{op}
+{
+    operand(std::move(lhs));
+}
+
 BoolExpr::BoolExpr(bool value, Range range)
     : LiteralExpr(std::move(range)), value{value}
 {
@@ -104,7 +116,6 @@ DeclarationStmt::DeclarationStmt(std::string_view var, bool imm, Range range)
 ParameterStmt::ParameterStmt(std::string_view var, Range range)
     : DeclarationStmt(var, true, std::move(range))
 {
-    def(nullptr);
 }
 
 ExpressionStmt::ExpressionStmt(Expr::Ptr exp, Range range)

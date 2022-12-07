@@ -2,15 +2,12 @@
 
 func any(age: f32, ge: i8, fe : i8, ...all: i32)
 {
-    @for (;; all) {
-        println(a);
-    }
 }
 
-func main() {
+func main(argc: i32 = 1) {
     mut hello: i32;
     mut b = 10;
-    for (mut i = 0; i < 10; i += 2)
+    for (mut i = 0; i < 10; i&b|2^3)
         i = 0;
     b += 10;
     b = b += 10;

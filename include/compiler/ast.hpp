@@ -125,6 +125,32 @@ public:
     Token::Kind op{};
 };
 
+struct PrefixExpr : public Expr {
+public:
+    CSTAR_PTR(PrefixExpr);
+
+    PrefixExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+
+    VisitableNode();
+
+    Token::Kind op{};
+};
+
+struct PostfixExpr : public Expr {
+public:
+    CSTAR_PTR(PostfixExpr);
+
+    PostfixExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+
+    VisitableNode();
+
+    Token::Kind op{};
+};
+
 struct UnaryExpr : public Expr {
 public:
     CSTAR_PTR(UnaryExpr);
@@ -288,8 +314,6 @@ public:
     CSTAR_PTR(ParameterStmt);
     using DeclarationStmt::DeclarationStmt;
     ParameterStmt(std::string_view name, Range range = {});
-
-    CYN_CONTAINER_NODE_MEMBER(Expr, 2, def);
 
     VisitableNode();
 };

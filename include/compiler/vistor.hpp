@@ -28,7 +28,8 @@ class Program;
     XX(Expression)                                                             \
     XX(If)                                                                     \
     XX(While)                                                                  \
-    XX(For)
+    XX(For)                                                                    \
+    XX(Parameter)
 
 #define NODE_DECL_LIST(XX) XX(Function)
 
@@ -49,7 +50,8 @@ class Program;
     XX(Node)                                                                   \
     XX(ContainerNode)                                                          \
     XX(Block)                                                                  \
-    XX(ExpressionList)
+    XX(ExpressionList)                                                         \
+    XX(StatementList)
 
 #define XX(N) struct N;
 NODE_LIST(XX)
