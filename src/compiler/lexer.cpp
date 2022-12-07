@@ -253,7 +253,7 @@ bool Lexer::tokenize(char c)
         ADD(Token::HASH);
         break;
     case '?':
-        ADD(Token::QUESTION);
+        IF_ELSE('?', Token::QUESTIONQUESTION, Token::QUESTION);
         break;
     case '`':
         ADD(Token::BACKQUOTE);

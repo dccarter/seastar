@@ -127,7 +127,7 @@ void Codegen::visit(DeclarationStmt &node)
 {
     Tab();
 
-    if (node.isImmutable) {
+    if (node.flags && gflIsImmutable) {
         Append("const ");
     }
 

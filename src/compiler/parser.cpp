@@ -438,7 +438,7 @@ Expr::Ptr Parser::expression() { return assignment(); }
 
 Expr::Ptr Parser::assignment()
 {
-    auto expr = lor();
+    auto expr = ternary();
     Expr::Ptr value;
     switch (kind()) {
     case Token::ASSIGN:
@@ -521,6 +521,35 @@ Expr::Ptr Parser::assignment()
         return expr;
     default:
         break;
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::ternary()
+{
+    auto expr = coalescing();
+    if (match(Token::QUESTION)) {
+        auto ifTrue = ternary();
+        consume(Token::COLON,
+                "expecting a colon ':' to seperate a ternary expression.");
+        auto ifFalse = ternary();
+        expr = std::make_shared<TernaryExpr>(
+            expr, std::move(ifTrue), ifFalse, expr->range());
+        expr->range().extend(ifFalse->range());
+    }
+
+    return expr;
+}
+
+Expr::Ptr Parser::coalescing()
+{
+    auto expr = lor();
+    if (match(Token::QUESTIONQUESTION)) {
+        auto rhs = lor();
+        expr =
+            std::make_shared<NullishCoalescingExpr>(expr, rhs, expr->range());
+        expr->range().extend(rhs->range());
     }
 
     return expr;
@@ -746,6 +775,16 @@ Expr::Ptr Parser::primary()
 {
     if (auto expr = literal()) {
         advance();
+        return expr;
+    }
+
+    if (match(Token::LSTREXPR)) {
+        auto expr = std::make_shared<StringExpressionExpr>(previous()->range());
+        while (!match(Token::RSTREXPR)) {
+            auto node = expression();
+            expr->addPart(node);
+        }
+        expr->range().extend(previous()->range());
         return expr;
     }
 

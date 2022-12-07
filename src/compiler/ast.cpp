@@ -37,6 +37,26 @@ AssignmentExpr::AssignmentExpr(Expr::Ptr lhs, Expr::Ptr rhs, Range range)
     value(std::move(rhs));
 }
 
+TernaryExpr::TernaryExpr(Expr::Ptr cond,
+                         Expr::Ptr iTrue,
+                         Expr::Ptr iFalse,
+                         Range range)
+    : Expr(std::move(range))
+{
+    condition(std::move(cond));
+    ifTrue(std::move(iTrue));
+    ifFalse(std::move(iFalse));
+}
+
+NullishCoalescingExpr::NullishCoalescingExpr(Expr::Ptr e1,
+                                             Expr::Ptr e2,
+                                             Range range)
+    : Expr(std::move(range))
+{
+    lhs(std::move(e1));
+    rhs(std::move(e2));
+}
+
 BinaryExpr::BinaryExpr(Expr::Ptr lhs,
                        Token::Kind op,
                        Expr::Ptr rhs,
@@ -107,10 +127,12 @@ CallExpr::CallExpr(Expr::Ptr func, Range range) : Expr(std::move(range))
 }
 
 DeclarationStmt::DeclarationStmt(std::string_view var, bool imm, Range range)
-    : Stmt(std::move(range)), isImmutable{imm}, name{var}
+    : Stmt(std::move(range)), name{var}
 {
     type(builtin::autoType());
     value(nullptr);
+    if (imm)
+        flags |= gflIsImmutable;
 }
 
 ParameterStmt::ParameterStmt(std::string_view var, Range range)

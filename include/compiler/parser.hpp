@@ -44,6 +44,14 @@ private:
     Expr::Ptr primary();
     Expr::Ptr expression();
     Expr::Ptr assignment();
+    /**
+     * cond? ifTrue : ifFalse
+     */
+    Expr::Ptr ternary();
+    /**
+     * lhs?? rhs
+     */
+    Expr::Ptr coalescing();
     Expr::Ptr lor();
     Expr::Ptr land();
     Expr::Ptr call();

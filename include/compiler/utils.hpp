@@ -215,7 +215,8 @@ typedef enum {
     gflIsExtern = BIT(4),
     gflIsOverload = BIT(5),
     gflLexerSkipComments = BIT(6),
-    gflIsReference = BIT(7)
+    gflIsReference = BIT(7),
+    gflIsImmutable = BIT(8),
 } GenericFlags_t;
 
 using GenericFlags = Flags<GenericFlags_t>;

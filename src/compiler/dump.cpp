@@ -37,6 +37,7 @@ void AstDump::visit(ContainerNode &node)
     for (auto &e : node.all()) {
         if (e != nullptr)
             e->accept(*this);
+        std::putchar('\n');
     }
 }
 
@@ -129,7 +130,7 @@ void AstDump::visit(StringExpr &node)
 
 void AstDump::visit(VariableExpr &node)
 {
-    std::printf("\"%.*s\"", int(node.name.size()), node.name.data());
+    std::printf("%.*s", int(node.name.size()), node.name.data());
 }
 
 void AstDump::visit(GroupingExpr &node)
@@ -146,6 +147,55 @@ void AstDump::visit(UnaryExpr &node)
     std::printf("%.*s", int(op.size()), op.data());
     node.operand()->accept(*this);
     std::putchar(')');
+}
+
+void AstDump::visit(PostfixExpr &node)
+{
+    std::putchar('(');
+    node.operand()->accept(*this);
+    auto op = Token::toString(node.op, true);
+    std::printf("%.*s", int(op.size()), op.data());
+    std::putchar(')');
+}
+
+void AstDump::visit(PrefixExpr &node)
+{
+    std::putchar('(');
+    auto op = Token::toString(node.op, true);
+    std::printf("%.*s", int(op.size()), op.data());
+    node.operand()->accept(*this);
+    std::putchar(')');
+}
+
+void AstDump::visit(TernaryExpr &node)
+{
+    std::putchar('(');
+    node.condition()->accept(*this);
+    std::fputs("? ", stdout);
+    node.ifTrue()->accept(*this);
+    std::fputs(" : ", stdout);
+    node.ifFalse()->accept(*this);
+    std::putchar(')');
+}
+
+void AstDump::visit(NullishCoalescingExpr &node)
+{
+    std::putchar('(');
+    node.lhs()->accept(*this);
+    std::fputs("?\? ", stdout);
+    node.rhs()->accept(*this);
+    std::putchar(')');
+}
+
+void AstDump::visit(StringExpressionExpr &node)
+{
+    std::fputs("f\"", stdout);
+    for (auto &part : node.parts()) {
+        std::fputs("${", stdout);
+        part->accept(*this);
+        std::putchar('}');
+    }
+    std::putchar('"');
 }
 
 void AstDump::visit(BinaryExpr &node)
@@ -208,19 +258,23 @@ void AstDump::visit(cstar::DeclarationStmt &node)
 {
     std::printf("%*c- DeclarationStmt:", level, ' ');
     level += 2;
+    if (node.flags && gflIsImmutable) {
+        std::printf("\n%*c- immutable\n", level, ' ');
+    }
+
     if (auto tp = node.type()) {
         std::printf("\n%*c- type: ", level, ' ');
         tp->accept(*this);
     }
 
-    std::printf("\n%*c- type: %.*s",
+    std::printf("\n%*c- name: %.*s",
                 level,
                 ' ',
                 int(node.name.size()),
                 node.name.data());
 
     if (auto val = node.value()) {
-        std::printf("\n%*c- type: ", level, ' ');
+        std::printf("\n%*c- value: ", level, ' ');
         val->accept(*this);
     }
     level -= 2;

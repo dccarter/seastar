@@ -13,6 +13,10 @@ func main(argc: i32 = 1) {
     b = b += 10;
 
     hello(10, 10, 10)(10, 10);
+
+    mut c = b == 10? (b == 19? 10: 20) : 6;
+    
+    f"Hello ${b + 10} is ${c}";
 }
 
 mut age = 10;

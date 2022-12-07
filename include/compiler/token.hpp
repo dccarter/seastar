@@ -3,7 +3,7 @@
  *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the MIT license. See LICENSE for details.
- * 
+ *
  * @author Carter
  * @date 2022-04-29
  */
@@ -17,6 +17,7 @@
 #include <string_view>
 #include <variant>
 
+// clang-format off
 #define TOKEN_LIST(XX, YY, ZZ, BB) \
     XX(EoF,                             "<eof>")        \
     XX(CHAR,                            "<char>")       \
@@ -70,6 +71,7 @@
     XX(MOD,                             "'%'")       \
     XX(MODASSIGN,                       "'%='")      \
     XX(QUESTION,                        "'?'")       \
+    XX(QUESTIONQUESTION,                "'\?\?'")      \
     XX(SEMICOLON,                       "';'")       \
     XX(SHL,                             "'<<'")      \
     XX(SHLASSIGN,                       "'=<<'")     \
@@ -150,84 +152,90 @@
         XX(TRAIT)       \
         XX(UNION)       \
         XX(USING)       \
-        XX(WHILE)       \
+        XX(WHILE)
 
+// clang-format on
 
 namespace cstar {
 
-    using TokenValue = std::variant<std::monostate, bool, std::uint32_t, std::uint64_t, double, std::string_view>;
-    class Token {
-    public:
-        typedef enum {
+using TokenValue = std::variant<std::monostate,
+                                bool,
+                                std::uint32_t,
+                                std::uint64_t,
+                                double,
+                                std::string_view>;
+class Token {
+public:
+    typedef enum {
 #define XX(NAME, _) NAME,
 #define ZZ(NAME, ...) NAME,
 #define YY(NAME, _) NAME,
 #define BB(NAME, _) NAME,
-            TOKEN_LIST(XX, YY, ZZ, BB)
+        TOKEN_LIST(XX, YY, ZZ, BB)
 #undef YY
 #undef ZZ
 #undef XX
 #undef BB
-        } Kind;
+    } Kind;
 
-        using Ref = std::list<Token>::iterator;
-        using Tange = std::pair<Ref, Ref>;
+    using Ref = std::list<Token>::iterator;
+    using Tange = std::pair<Ref, Ref>;
 
-    public:
-        Token() = default;
-        Token(Kind kind, Range range)
-            : kind{kind},
-              _range{range}
-        {}
+public:
+    Token() = default;
+    Token(Kind kind, Range range) : kind{kind}, _range{range} {}
 
-        template <typename T>
-        Token(Kind kind, Range range, T value)
-            : kind{kind},
-              _range{range},
-              _value{std::forward<T>(value)}
-        {}
+    template <typename T>
+    Token(Kind kind, Range range, T value)
+        : kind{kind}, _range{range}, _value{std::forward<T>(value)}
+    {
+    }
 
-        Token split(Kind first, Kind second);
+    Token split(Kind first, Kind second);
 
-        std::string_view toString() const { return toString(kind); }
+    std::string_view toString() const { return toString(kind); }
 
-        bool isKeyword() const { return isKeyword(kind); }
+    bool isKeyword() const { return isKeyword(kind); }
 
-        const Range& range() const { return _range; }
+    const Range &range() const { return _range; }
 
-        static bool isKeyword(Kind kind) {
-            return (kind >= ALIGINOF) and (kind <= VOID);
-        }
+    static bool isKeyword(Kind kind)
+    {
+        return (kind >= ALIGINOF) and (kind <= VOID);
+    }
 
-        static bool isComptimeLiteral(Kind kind);
+    static bool isComptimeLiteral(Kind kind);
 
-        bool isComptimeLiteral() const {return isComptimeLiteral(kind); }
+    bool isComptimeLiteral() const { return isComptimeLiteral(kind); }
 
-        static std::string_view toString(Kind kind, bool strip = false);
+    static std::string_view toString(Kind kind, bool strip = false);
 
-        template <typename T>
-        const T& value() const {
-            return get<T>(_value);
-        }
+    template <typename T>
+    const T &value() const
+    {
+        return get<T>(_value);
+    }
 
-        template <typename T>
-        bool has() const {
-           return holds_alternative<T>(_value);
-        }
+    template <typename T>
+    bool has() const
+    {
+        return holds_alternative<T>(_value);
+    }
 
-        bool isBinaryOperator() const;
-        bool isUnaryOperator() const;
-        bool isTernaryOperator() const;
-        bool isStatementBoundary() const;
-        static bool isLogicalOperator(Token::Kind kind);
-    public:
-        Kind kind{EoF};
+    bool isBinaryOperator() const;
+    bool isUnaryOperator() const;
+    bool isTernaryOperator() const;
+    bool isStatementBoundary() const;
+    static bool isLogicalOperator(Token::Kind kind);
 
-    private:
-        friend class Lexer;
-        Range _range{};
-        TokenValue _value{};
-    };
-}
+public:
+    Kind kind{EoF};
 
-std::ostream& operator<<(std::ostream& os, const cstar::Token& tok);
+private:
+    friend class Lexer;
+    Range _range{};
+    TokenValue _value{};
+};
+} // namespace cstar
+
+std::ostream &operator<<(std::ostream &os, const cstar::Token &tok);

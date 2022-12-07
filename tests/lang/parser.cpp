@@ -37,10 +37,8 @@ int main(int argc, char *argv[])
     if (!parser.parse(program)) {
         abortCompiler(L);
     }
+
     AstDump dump;
     dump.dump(program);
-
-    Codegen codegen(std::cout);
-    codegen.generate(program);
     abortCompiler(L);
 }

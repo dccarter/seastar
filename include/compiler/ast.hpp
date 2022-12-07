@@ -96,12 +96,53 @@ struct AssignmentExpr : public Expr {
 public:
     CSTAR_PTR(AssignmentExpr);
 
-    using Expr::Expr;
-
     AssignmentExpr(Expr::Ptr assignee, Expr::Ptr value, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, assignee);
-    CYN_CONTAINER_NODE_MEMBER(Expr, 1, value);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, assignee);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, value);
+
+    VisitableNode()
+};
+
+struct NullishCoalescingExpr : public Expr {
+public:
+    CSTAR_PTR(NullishCoalescingExpr);
+
+    NullishCoalescingExpr(Expr::Ptr lhs, Expr::Ptr rhs, Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, lhs);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, rhs);
+
+    VisitableNode()
+};
+
+struct StringExpressionExpr : public Expr {
+public:
+    CSTAR_PTR(StringExpressionExpr);
+
+    using Expr::Expr;
+
+    CYN_CONTAINER_NODE_VIEW(1, parts);
+
+    void addPart(Expr::Ptr node) { push(std::move(node)); }
+
+    VisitableNode()
+};
+
+struct TernaryExpr : public Expr {
+public:
+    CSTAR_PTR(TernaryExpr);
+
+    using Expr::Expr;
+
+    TernaryExpr(Expr::Ptr cond,
+                Expr::Ptr iTrue,
+                Expr::Ptr iFalse,
+                Range range = {});
+
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, condition);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, ifTrue);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 3, ifFalse);
 
     VisitableNode()
 };
@@ -117,8 +158,8 @@ public:
                Expr::Ptr right,
                Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, left);
-    CYN_CONTAINER_NODE_MEMBER(Expr, 1, right);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, left);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 2, right);
 
     VisitableNode();
 
@@ -131,7 +172,7 @@ public:
 
     PrefixExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, operand);
 
     VisitableNode();
 
@@ -144,7 +185,7 @@ public:
 
     PostfixExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, operand);
 
     VisitableNode();
 
@@ -159,7 +200,7 @@ public:
 
     UnaryExpr(Token::Kind op, Expr::Ptr operand, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, operand);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, operand);
 
     VisitableNode();
 
@@ -249,7 +290,7 @@ public:
     using Expr::Expr;
     GroupingExpr(Expr::Ptr expr, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, expr);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, expr);
 
     VisitableNode()
 };
@@ -276,8 +317,8 @@ public:
     using Expr::Expr;
     CallExpr(Expr::Ptr callee, Range range = {});
 
-    CYN_CONTAINER_NODE_MEMBER(Expr, 0, callee);
-    CYN_CONTAINER_NODE_MEMBER(ExpressionList, 1, arguments);
+    CYN_CONTAINER_NODE_MEMBER(Expr, 1, callee);
+    CYN_CONTAINER_NODE_MEMBER(ExpressionList, 2, arguments);
 
     VisitableNode()
 };
@@ -305,7 +346,6 @@ public:
 
     VisitableNode();
 
-    bool isImmutable{false};
     std::string_view name{};
 };
 

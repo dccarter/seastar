@@ -44,7 +44,12 @@ class Program;
     XX(Unary)                                                                  \
     XX(Grouping)                                                               \
     XX(Assignment)                                                             \
-    XX(Call)
+    XX(Call)                                                                   \
+    XX(Postfix)                                                                \
+    XX(Prefix)                                                                 \
+    XX(Ternary)                                                                \
+    XX(NullishCoalescing)                                                      \
+    XX(StringExpression)
 
 #define NODE_LIST(XX)                                                          \
     XX(Node)                                                                   \
